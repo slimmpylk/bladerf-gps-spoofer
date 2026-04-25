@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS L1 C/A Theory — bladerf-gps-spoofer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700&family=Spectral:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--bg2:#131720;--bg3:#1a1f2e;--bg4:#222840;
+  --border:#2a3050;--border2:#3a4570;
+  --text:#d4d8e8;--text2:#8a90b0;--text3:#5a6080;
+  --accent:#5b8af0;--accent2:#3a6ad0;--accentbg:#1a2540;
+  --green:#4caf7a;--greenbg:#0d2018;
+  --amber:#e8a03a;--amberbg:#1e1500;
+  --red:#e05050;
+  --mono:'Space Mono',monospace;
+  --serif:'Spectral',Georgia,serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.7}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Layout */
+.page{max-width:800px;margin:0 auto;padding:0 1.5rem 4rem}
+
+/* Nav */
+nav{position:sticky;top:0;background:rgba(13,15,20,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);padding:.6rem 1.5rem;z-index:100;
+    display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.nav-logo{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.05em;flex-shrink:0}
+.nav-links{display:flex;gap:.5rem;flex-wrap:wrap;flex:1}
+.nav-links a{font-size:11px;color:var(--text2);padding:3px 8px;border:1px solid transparent;
+             border-radius:3px;transition:all .15s}
+.nav-links a:hover{border-color:var(--border2);color:var(--text);text-decoration:none}
+.nav-gh{font-size:11px;color:var(--text3);margin-left:auto;flex-shrink:0}
+.nav-gh a{color:var(--text2)}
+
+/* Hero */
+.hero{padding:3rem 0 2.5rem;border-bottom:1px solid var(--border)}
+.hero-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);margin-bottom:.75rem}
+.hero-title{font-family:var(--serif);font-size:36px;font-weight:300;line-height:1.25;color:#f0f2ff;margin-bottom:.75rem}
+.hero-title strong{font-weight:600;color:#fff}
+.hero-desc{font-size:13px;color:var(--text2);line-height:1.8;max-width:600px;margin-bottom:1.25rem}
+.badge-row{display:flex;gap:.5rem;flex-wrap:wrap}
+.badge{font-size:10px;padding:3px 10px;border-radius:12px;border:1px solid;font-family:var(--mono)}
+.badge-blue{background:var(--accentbg);border-color:var(--accent2);color:var(--accent)}
+.badge-green{background:var(--greenbg);border-color:#2a6040;color:var(--green)}
+.badge-amber{background:var(--amberbg);border-color:#6a4400;color:var(--amber)}
+
+/* TOC */
+.toc{padding:1.5rem 0;border-bottom:1px solid var(--border)}
+.toc-title{font-size:10px;letter-spacing:.15em;color:var(--text3);margin-bottom:.75rem}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.35rem}
+.toc-item{font-size:12px;color:var(--text2);padding:.3rem .5rem;border-radius:3px;transition:all .15s}
+.toc-item:hover{background:var(--bg3);color:var(--text);text-decoration:none}
+.toc-item span{color:var(--text3);margin-right:.4rem}
+
+/* Sections */
+.section{padding:2.5rem 0;border-bottom:1px solid var(--border)}
+.sec-header{margin-bottom:1.5rem}
+.sec-num{font-size:10px;letter-spacing:.15em;color:var(--accent);margin-bottom:.4rem;font-weight:700}
+.sec-title{font-family:var(--serif);font-size:24px;font-weight:400;color:#f0f2ff}
+
+/* Prose */
+.prose{font-family:var(--serif);font-size:16px;line-height:1.85;color:var(--text2);margin-bottom:1rem}
+.prose strong{color:var(--text);font-weight:600}
+
+/* Math blocks */
+.math-block{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);
+            border-radius:0 6px 6px 0;padding:1.25rem 1.5rem;margin:1.25rem 0;overflow-x:auto}
+.math-label{font-size:10px;letter-spacing:.15em;color:var(--text3);margin-bottom:.75rem;font-weight:700}
+.math-note{font-size:12px;color:var(--text3);margin-top:.75rem;line-height:1.8;font-family:var(--serif)}
+.math-note code{background:var(--bg3);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+.katex-display{margin:.5rem 0 !important;color:#e8ecff}
+.katex{color:#e8ecff}
+
+/* Signal chain */
+.signal-chain{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:1.25rem 0;
+              background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:1rem}
+.sc-node{border:1px solid var(--border2);border-radius:5px;padding:.4rem .75rem;
+         font-size:11px;color:var(--text2);background:var(--bg3);cursor:pointer;
+         transition:all .2s;white-space:nowrap}
+.sc-node:hover,.sc-node.active{background:var(--accentbg);border-color:var(--accent);color:var(--accent)}
+.sc-op{font-size:13px;color:var(--text3);padding:0 6px}
+
+/* Info grid */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin:1.25rem 0}
+.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.75rem 1rem}
+.ic-label{font-size:9px;letter-spacing:.12em;color:var(--text3);margin-bottom:.25rem;text-transform:uppercase}
+.ic-val{font-size:17px;font-weight:700;color:#fff}
+.ic-sub{font-size:10px;color:var(--text3);margin-top:.15rem}
+
+/* LFSR demo */
+.demo-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin:1.25rem 0}
+.demo-title{font-size:10px;letter-spacing:.15em;color:var(--text3);margin-bottom:1rem;font-weight:700}
+.bit{width:28px;height:28px;border:1px solid var(--border);border-radius:4px;
+     display:inline-flex;align-items:center;justify-content:center;
+     font-size:11px;font-family:var(--mono);transition:all .2s;color:var(--text3);
+     background:var(--bg3);margin:1px}
+.bit.one{background:#0d2018;border-color:#2a6040;color:var(--green)}
+.chip-row{display:flex;flex-wrap:wrap;gap:2px;margin-top:.5rem}
+.chip{width:10px;height:10px;border-radius:2px;background:var(--bg3);transition:background .12s}
+.chip.one{background:var(--green)}
+.lfsr-controls{display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;align-items:center}
+.btn{font-family:var(--mono);font-size:11px;padding:5px 14px;border:1px solid var(--border2);
+     border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+.btn.primary{border-color:var(--accent2);color:var(--accent)}
+.btn.primary:hover{background:var(--accentbg)}
+.btn.danger{border-color:#5a2020;color:var(--red)}
+.btn.danger:hover{background:#1a0a0a}
+.prn-sel{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap}
+.prn-sel label{font-size:11px;color:var(--text3)}
+.prn-sel input[type=range]{width:120px;accent-color:var(--accent)}
+
+/* Polynomial box */
+.poly-box{background:var(--bg2);border-left:3px solid var(--border2);
+          padding:.6rem 1rem;margin:.5rem 0;border-radius:0 4px 4px 0;font-size:13px}
+.poly-box .label{color:var(--text3);font-size:10px;letter-spacing:.1em;display:block;margin-bottom:.2rem}
+
+/* Frame vis */
+.frame-vis{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+           padding:1.25rem;margin:1.25rem 0;overflow-x:auto}
+.frame-row{display:flex;gap:3px;min-width:540px;margin-bottom:.75rem}
+.frame-seg{height:34px;display:flex;align-items:center;justify-content:center;
+           font-size:10px;border-radius:4px;font-family:var(--mono);cursor:pointer;
+           transition:opacity .15s;flex-shrink:0;font-weight:700}
+.frame-seg:hover{opacity:.8}
+.frame-info{font-size:12px;color:var(--text2);min-height:40px;line-height:1.6;
+            font-family:var(--serif)}
+
+/* Orbit canvas */
+.canvas-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+             padding:1.25rem;margin:1.25rem 0}
+.canvas-info{font-size:11px;color:var(--text3);margin-top:.5rem;font-family:var(--mono)}
+canvas{width:100%;display:block;border-radius:4px}
+
+/* Kepler table */
+.ktable{width:100%;border-collapse:collapse;font-size:12px;margin:.75rem 0}
+.ktable th{text-align:left;font-size:10px;letter-spacing:.1em;color:var(--text3);
+           padding:.5rem .75rem;border-bottom:1px solid var(--border);font-weight:400;text-transform:uppercase}
+.ktable td{padding:.45rem .75rem;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+.ktable td:first-child{color:var(--accent);font-weight:700;font-size:13px;white-space:nowrap}
+.ktable td:nth-child(2){color:var(--text3);font-style:italic;font-family:var(--serif)}
+
+/* Algorithm steps */
+.algo{margin:.5rem 0}
+.algo-step{display:flex;align-items:flex-start;gap:.6rem;margin:.4rem 0;
+           font-size:12px;color:var(--text2);line-height:1.7}
+.step-n{width:20px;height:20px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);
+        display:flex;align-items:center;justify-content:center;font-size:10px;
+        color:var(--accent);flex-shrink:0;margin-top:2px}
+.algo-step code{background:var(--bg3);padding:1px 6px;border-radius:3px;
+                font-size:11px;color:var(--green);font-family:var(--mono)}
+
+/* IQ canvas */
+.iq-controls{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.iq-controls label{font-size:11px;color:var(--text3)}
+.iq-controls input[type=range]{width:110px;accent-color:var(--accent)}
+.iq-controls span{font-size:11px;color:var(--accent)}
+
+/* References */
+.ref-section{margin:2rem 0 1rem}
+.ref-section-title{font-size:11px;letter-spacing:.15em;text-transform:uppercase;
+                   color:var(--text3);border-bottom:1px solid var(--border);
+                   padding-bottom:.4rem;margin-bottom:.75rem}
+.ref-item{margin:.75rem 0;padding:.75rem 1rem;background:var(--bg2);
+          border:1px solid var(--border);border-radius:6px}
+.ref-item .ref-title{font-family:var(--serif);font-size:14px;color:var(--text);font-weight:500;margin-bottom:.2rem}
+.ref-item .ref-author{font-size:12px;color:var(--text3);margin-bottom:.2rem}
+.ref-item .ref-note{font-size:12px;color:var(--text2);font-family:var(--serif);line-height:1.5}
+.ref-item .ref-link{font-size:11px;color:var(--accent);margin-top:.35rem;display:block;word-break:break-all}
+
+/* Footer */
+footer{padding:2rem 0;border-top:1px solid var(--border);font-size:11px;color:var(--text3);text-align:center;line-height:2}
+footer a{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">▸ bladerf-gps-spoofer</div>
+  <div class="nav-links">
+    <a href="#s1">Signal</a>
+    <a href="#s2">C/A code</a>
+    <a href="#s3">NAV msg</a>
+    <a href="#s4">Orbital</a>
+    <a href="#s5">Doppler</a>
+    <a href="#s6">I/Q</a>
+    <a href="#refs">References</a>
+  </div>
+  <div class="nav-gh"><a href="https://github.com/yourusername/bladerf-gps-spoofer">← Back to GitHub</a></div>
+</nav>
+
+<div class="page">
+
+<div class="hero">
+  <div class="hero-eyebrow">Theory Reference · bladerf-gps-spoofer</div>
+  <h1 class="hero-title">GPS L1 C/A Signal<br><strong>Generation — Mathematics</strong></h1>
+  <p class="hero-desc">
+    Complete mathematical derivation of every component required to synthesise a GPS L1 C/A
+    signal — from Keplerian orbital mechanics to I/Q baseband samples streamed to a bladeRF SDR.
+    All equations are referenced to their primary source in IS-GPS-200 and published literature.
+  </p>
+  <div class="badge-row">
+    <span class="badge badge-blue">IS-GPS-200L</span>
+    <span class="badge badge-amber">L1 · 1575.42 MHz</span>
+    <span class="badge badge-green">C/A · 1.023 Mcps · BPSK(1)</span>
+    <span class="badge badge-blue">bladeRF 2.0 micro</span>
+  </div>
+</div>
+
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <div class="toc-grid">
+    <a href="#s1" class="toc-item"><span>§01</span>GPS signal structure</a>
+    <a href="#s2" class="toc-item"><span>§02</span>C/A Gold code generation</a>
+    <a href="#s3" class="toc-item"><span>§03</span>Navigation message</a>
+    <a href="#s4" class="toc-item"><span>§04</span>Satellite position (ECEF)</a>
+    <a href="#s5" class="toc-item"><span>§05</span>Pseudorange &amp; Doppler</a>
+    <a href="#s6" class="toc-item"><span>§06</span>BPSK baseband &amp; I/Q</a>
+    <a href="#refs" class="toc-item"><span>§07</span>References &amp; citations</a>
+  </div>
+</div>
+
+<!-- §01 SIGNAL STRUCTURE -->
+<section class="section" id="s1">
+  <div class="sec-header">
+    <div class="sec-num">§ 01</div>
+    <h2 class="sec-title">GPS Signal Structure</h2>
+  </div>
+  <p class="prose">Every GPS satellite transmits a spread-spectrum signal on the L1 carrier at 1575.42 MHz. The signal is the product of three components: a PRN-unique C/A spreading code, a 50 bps navigation data bit stream, and the carrier. We generate each component independently, combine them, and stream the resulting complex baseband (I/Q) samples to the bladeRF's DAC. <em>(IS-GPS-200L §3.3)</em></p>
+
+  <div class="signal-chain">
+    <div class="sc-node active" onclick="schl(0,'s2')">C/A code<br><small style="font-size:9px;color:#5a90b0">1.023 Mcps</small></div>
+    <span class="sc-op">⊕</span>
+    <div class="sc-node" onclick="schl(1,'s3')">NAV data<br><small style="font-size:9px;color:#5a90b0">50 bps</small></div>
+    <span class="sc-op">×</span>
+    <div class="sc-node" onclick="schl(2,'s6')">BPSK mod.<br><small style="font-size:9px;color:#5a90b0">carrier × code</small></div>
+    <span class="sc-op">→</span>
+    <div class="sc-node" onclick="schl(3,'s6')">I/Q baseband<br><small style="font-size:9px;color:#5a90b0">SC16Q11</small></div>
+    <span class="sc-op">→</span>
+    <div class="sc-node" onclick="schl(4,'s1')">bladeRF TX<br><small style="font-size:9px;color:#5a90b0">1575.42 MHz</small></div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Transmitted signal — IS-GPS-200L Eq. (3-1)</div>
+    $$s(t) = \sqrt{2P}\; \underbrace{D(t)}_{\text{NAV data}}\; \underbrace{CA(t)}_{\text{C/A code}}\; \cos\!\bigl(2\pi f_{L1} t + \varphi\bigr)$$
+    <div class="math-note">
+      $\sqrt{2P}$ — amplitude from transmit power $P$<br>
+      $D(t) \in \{-1,+1\}$ — navigation data bit at 50 bps<br>
+      $CA(t) \in \{-1,+1\}$ — C/A spreading code at 1.023 Mcps<br>
+      $f_{L1} = 1575.42\;\text{MHz} = 154 \times f_0$, where $f_0 = 10.23\;\text{MHz}$
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card"><div class="ic-label">L1 carrier</div><div class="ic-val">1575.42</div><div class="ic-sub">MHz</div></div>
+    <div class="info-card"><div class="ic-label">Chip rate</div><div class="ic-val">1.023</div><div class="ic-sub">Mcps</div></div>
+    <div class="info-card"><div class="ic-label">Code length</div><div class="ic-val">1,023</div><div class="ic-sub">chips per 1 ms epoch</div></div>
+    <div class="info-card"><div class="ic-label">NAV data rate</div><div class="ic-val">50</div><div class="ic-sub">bps BPSK</div></div>
+    <div class="info-card"><div class="ic-label">Min sample rate</div><div class="ic-val">2.048</div><div class="ic-sub">Msps (Nyquist)</div></div>
+    <div class="info-card"><div class="ic-label">bladeRF rate</div><div class="ic-val">2.6</div><div class="ic-sub">Msps (recommended)</div></div>
+  </div>
+</section>
+
+<!-- §02 C/A CODE -->
+<section class="section" id="s2">
+  <div class="sec-header">
+    <div class="sec-num">§ 02</div>
+    <h2 class="sec-title">C/A Gold Code Generator</h2>
+  </div>
+  <p class="prose">Each GPS satellite uses a unique 1023-chip pseudorandom sequence — a Gold code — generated by XOR-ing the outputs of two 10-stage Linear Feedback Shift Registers (LFSRs). The generator polynomials and per-PRN phase offsets are defined in <strong>IS-GPS-200L Table 3-Ia</strong>.</p>
+
+  <div class="prose">The two generator polynomials over GF(2):</div>
+
+  <div class="poly-box">
+    <span class="label">G1 POLYNOMIAL</span>
+    $$G_1(x) = x^{10} + x^3 + 1$$
+  </div>
+  <div class="poly-box">
+    <span class="label">G2 POLYNOMIAL</span>
+    $$G_2(x) = x^{10} + x^9 + x^8 + x^6 + x^3 + x^2 + 1$$
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">LFSR feedback equations — IS-GPS-200L §3.3.2</div>
+    $$s_{11}^{(G1)} = s_3 \oplus s_{10}$$
+    $$s_{11}^{(G2)} = s_2 \oplus s_3 \oplus s_6 \oplus s_8 \oplus s_9 \oplus s_{10}$$
+    <div class="math-note">Both registers are initialised to all-ones: $s_1 \ldots s_{10} = 1$.</div>
+    <div class="math-label" style="margin-top:1rem">C/A chip output</div>
+    $$CA_k[n] = G_1[n] \;\oplus\; G_2\!\bigl[n + \delta_k\bigr]$$
+    <div class="math-note">
+      $\delta_k$ — G2 phase delay for PRN $k$, from IS-GPS-200L Table 3-Ia.<br>
+      The delay is implemented by selecting specific output taps on G2 rather than physically advancing the register.
+    </div>
+  </div>
+
+  <p class="prose">The key property of Gold codes is near-zero cross-correlation: $|R_{ij}(\tau)| \leq \frac{1+2^{(n+2)/2}}{2^n-1}$ for $n=10$, giving $\approx -24\;\text{dB}$. This allows 32 satellites to share the same 1575.42 MHz channel simultaneously. <em>(Gold, 1967 — see §07)</em></p>
+
+  <div class="demo-box">
+    <div class="demo-title">Interactive — C/A code generator (PRN <span id="prn-disp">1</span>)</div>
+    <div class="prn-sel">
+      <label>PRN:</label>
+      <input type="range" id="prn-sel" min="1" max="32" value="1" oninput="setPRN(+this.value)">
+      <span id="prn-val" style="font-size:11px;color:var(--accent)">PRN 1</span>
+      <span style="font-size:11px;color:var(--text3);margin-left:.5rem">Step: <span id="step-count">0</span>/1023</span>
+    </div>
+    <div style="margin-bottom:.5rem">
+      <div style="font-size:10px;color:var(--accent);margin-bottom:3px;letter-spacing:.1em">G1 REGISTER</div>
+      <div id="g1-bits" style="display:flex;flex-wrap:wrap;gap:2px"></div>
+    </div>
+    <div style="margin-bottom:.5rem">
+      <div style="font-size:10px;color:var(--amber);margin-bottom:3px;letter-spacing:.1em">G2 REGISTER</div>
+      <div id="g2-bits" style="display:flex;flex-wrap:wrap;gap:2px"></div>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin:.5rem 0 .25rem;letter-spacing:.1em">OUTPUT CHIPS (last 120)</div>
+    <div class="chip-row" id="chip-out"></div>
+    <div class="lfsr-controls">
+      <button class="btn primary" id="btn-run" onclick="toggleRun()">▶ Run</button>
+      <button class="btn" onclick="stepOnce()">Step ›</button>
+      <button class="btn danger" onclick="resetLFSR()">↺ Reset</button>
+      <span style="font-size:11px;color:var(--text3)">Output: <span id="out-bit" style="color:var(--green);font-weight:700">—</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- §03 NAV MESSAGE -->
+<section class="section" id="s3">
+  <div class="sec-header">
+    <div class="sec-num">§ 03</div>
+    <h2 class="sec-title">Navigation Message</h2>
+  </div>
+  <p class="prose">The navigation message is broadcast at 50 bps. One complete frame is 1500 bits = 30 seconds. Each frame consists of 5 subframes × 10 words × 30 bits. Each bit spans exactly 20 C/A code repetitions (20 ms). <em>(IS-GPS-200L §20.3)</em></p>
+
+  <div class="frame-vis">
+    <div style="font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:.75rem">1500-BIT FRAME STRUCTURE — hover to inspect</div>
+    <div class="frame-row" id="frame-row"></div>
+    <div class="frame-info" id="frame-info">← Hover a subframe to see its contents</div>
+  </div>
+
+  <div class="math-block">
+    <div class="math-label">Word structure (30 bits) — IS-GPS-200L §20.3.5</div>
+    $$\underbrace{b_1 \ldots b_{22}}_{\text{22 data bits}} \;\|\; \underbrace{b_{23} b_{24}}_{\text{parity input}} \;\|\; \underbrace{b_{25}\ldots b_{30}}_{\text{6 parity bits}}$$
+    <div class="math-label" style="margin-top:1rem">Parity bit 25 — IS-GPS-200L §20.3.5.2</div>
+    $$d_{25} = D_{29}^{*} \oplus d_1 \oplus d_2 \oplus d_3 \oplus d_5 \oplus d_6 \oplus d_{10} \oplus d_{11} \oplus d_{12} \oplus d_{13} \oplus d_{14} \oplus d_{17} \oplus d_{18} \oplus d_{20} \oplus d_{23}$$
+    <div class="math-note">$D_{29}^{*}$, $D_{30}^{*}$ are the last two bits of the preceding transmitted word. Full 6-equation parity table in IS-GPS-200L §20.3.5.2, Table 20-XIV.</div>
+  </div>
+
+  <table class="ktable">
+    <tr><th>Subframe</th><th>Content</th><th>Period</th></tr>
+    <tr><td>SF1</td><td>Satellite clock corrections ($a_{f0}, a_{f1}, a_{f2}$), GPS week number, URA, health, $T_{GD}$</td><td>Every frame (30 s)</td></tr>
+    <tr><td>SF2</td><td>Ephemeris part I: $M_0$, $\Delta n$, $e$, $\sqrt{a}$, $t_{oe}$, $C_{uc}, C_{us}, C_{rs}$</td><td>Every frame (30 s)</td></tr>
+    <tr><td>SF3</td><td>Ephemeris part II: $i_0$, $\Omega_0$, $\omega$, $\dot{I}$, $\dot{\Omega}$, $C_{ic}, C_{is}, C_{rc}$</td><td>Every frame (30 s)</td></tr>
+    <tr><td>SF4</td><td>Almanac pages (SVs 25–32), ionospheric model ($\alpha_i, \beta_i$), UTC params</td><td>25 frames = 12.5 min</td></tr>
+    <tr><td>SF5</td><td>Almanac pages (SVs 1–24), health summary</td><td>25 frames = 12.5 min</td></tr>
+  </table>
+</section>
+
+<!-- §04 SATELLITE POSITION -->
+<section class="section" id="s4">
+  <div class="sec-header">
+    <div class="sec-num">§ 04</div>
+    <h2 class="sec-title">Satellite Position from RINEX Ephemeris</h2>
+  </div>
+  <p class="prose">To generate a believable signal, we must compute where each satellite actually is in <strong>ECEF (Earth-Centered Earth-Fixed)</strong> coordinates at every GPS epoch. The orbital parameters are read from RINEX navigation files (updated daily by the IGS network) and solved via the IS-GPS-200 Keplerian algorithm. <em>(IS-GPS-200L §20.3.3.4.3)</em></p>
+
+  <table class="ktable">
+    <tr><th>RINEX parameter</th><th>Symbol</th><th>Description</th></tr>
+    <tr><td>sqrt(A)</td><td>$\sqrt{a}$</td><td>Square root of semi-major axis (m$^{1/2}$)</td></tr>
+    <tr><td>e</td><td>$e$</td><td>Eccentricity (0 = circular)</td></tr>
+    <tr><td>i0</td><td>$i_0$</td><td>Inclination at $t_{oe}$ (rad)</td></tr>
+    <tr><td>OMEGA0</td><td>$\Omega_0$</td><td>Right ascension of ascending node (rad)</td></tr>
+    <tr><td>omega</td><td>$\omega$</td><td>Argument of perigee (rad)</td></tr>
+    <tr><td>M0</td><td>$M_0$</td><td>Mean anomaly at reference time (rad)</td></tr>
+    <tr><td>Delta n</td><td>$\Delta n$</td><td>Mean motion correction (rad/s)</td></tr>
+    <tr><td>IDOT, OMEGADOT</td><td>$\dot{I}, \dot{\Omega}$</td><td>Rate of inclination and RAAN (rad/s)</td></tr>
+    <tr><td>Cuc, Cus, Crc, Crs, Cic, Cis</td><td>—</td><td>Harmonic correction terms (rad or m)</td></tr>
+  </table>
+
+  <div class="math-block">
+    <div class="math-label">Algorithm — ECEF position from ephemeris (IS-GPS-200L §20.3.3.4.3)</div>
+    <div class="algo">
+      <div class="algo-step"><div class="step-n">1</div>Corrected mean motion: <code>n = √(μ/a³) + Δn</code></div>
+      <div class="algo-step"><div class="step-n">2</div>Time from ephemeris epoch: <code>t_k = t - t_oe</code> (correct for week crossover)</div>
+      <div class="algo-step"><div class="step-n">3</div>Mean anomaly: <code>M = M₀ + n·t_k</code></div>
+      <div class="algo-step"><div class="step-n">4</div>Solve Kepler's equation iteratively: <code>E = M + e·sin(E)</code> until $|\Delta E| &lt; 10^{-12}$</div>
+      <div class="algo-step"><div class="step-n">5</div>True anomaly: <code>ν = atan2(√(1−e²)·sin(E), cos(E)−e)</code></div>
+      <div class="algo-step"><div class="step-n">6</div>Argument of latitude: <code>Φ = ν + ω</code></div>
+      <div class="algo-step"><div class="step-n">7</div>Second-order corrections: <code>δu = Cus·sin(2Φ) + Cuc·cos(2Φ)</code>, similarly δr, δi</div>
+      <div class="algo-step"><div class="step-n">8</div>Corrected radius: <code>r = a(1 − e·cos(E)) + δr</code></div>
+      <div class="algo-step"><div class="step-n">9</div>Position in orbital plane: <code>xₚ = r·cos(u), yₚ = r·sin(u)</code></div>
+      <div class="algo-step"><div class="step-n">10</div>Corrected RAAN: <code>Ω = Ω₀ + (Ω̇−Ω̇ₑ)·t_k − Ω̇ₑ·t_oe</code></div>
+      <div class="algo-step"><div class="step-n">11</div>Rotate into ECEF: $X = x_p\cos\Omega - y_p\cos i\sin\Omega$, $Y = x_p\sin\Omega + y_p\cos i\cos\Omega$, $Z = y_p\sin i$</div>
+    </div>
+    <div class="math-note">
+      $\mu = 3.986005 \times 10^{14}$ m³/s² — WGS-84 Earth gravitational constant<br>
+      $\dot{\Omega}_e = 7.2921151467 \times 10^{-5}$ rad/s — WGS-84 Earth rotation rate<br>
+      $c = 2.99792458 \times 10^8$ m/s — speed of light
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <div style="font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:.75rem">Orbital animation — satellite ECEF position (simplified, inclination 55°)</div>
+    <canvas id="orbitCanvas" height="180"></canvas>
+    <div class="canvas-info" id="orbit-info">Computing...</div>
+  </div>
+</section>
+
+<!-- §05 PSEUDORANGE & DOPPLER -->
+<section class="section" id="s5">
+  <div class="sec-header">
+    <div class="sec-num">§ 05</div>
+    <h2 class="sec-title">Pseudorange &amp; Doppler Shift</h2>
+  </div>
+  <p class="prose">Given satellite ECEF position $\mathbf{r}_{sv}$ and spoofed receiver position $\mathbf{r}_u$, we compute the geometric range, code phase (pseudorange), and Doppler-shifted carrier frequency for each visible satellite independently. These three quantities drive the timing and frequency of each PRN channel in our signal generator. <em>(Misra &amp; Enge, 2006, Ch. 4)</em></p>
+
+  <div class="math-block">
+    <div class="math-label">Geometric range</div>
+    $$\rho = \|\mathbf{r}_{sv} - \mathbf{r}_u\| = \sqrt{(x_{sv}-x_u)^2 + (y_{sv}-y_u)^2 + (z_{sv}-z_u)^2}$$
+    <div class="math-label" style="margin-top:1rem">Code phase offset (chips)</div>
+    $$\tau = \frac{\rho}{c} \cdot f_{chip} = \frac{\rho}{c} \times 1.023\times10^6$$
+    <div class="math-label" style="margin-top:1rem">Carrier Doppler frequency</div>
+    $$f_D = -\frac{(\mathbf{v}_{sv} - \mathbf{v}_u)\cdot\hat{\mathbf{e}}_{u\to sv}}{\lambda_{L1}}$$
+    <div class="math-label" style="margin-top:1rem">Code Doppler (chip rate correction)</div>
+    $$f_{chip,D} = f_D \cdot \frac{f_{chip}}{f_{L1}} \approx f_D \times 6.5\times10^{-4}$$
+    <div class="math-note">
+      $\hat{\mathbf{e}}_{u\to sv}$ — unit vector from receiver to satellite<br>
+      $\lambda_{L1} = c / f_{L1} \approx 0.1903$ m<br>
+      For a stationary receiver: $\mathbf{v}_u = 0$, but satellite orbital velocity ($\approx 3.9$ km/s) still produces $\pm$5 kHz Doppler per channel.
+    </div>
+  </div>
+
+  <p class="prose">For a stationary spoofed position, all dynamics come from actual satellite motion. The geometry changes every millisecond, so the signal generator recomputes $\rho$, $\tau$, and $f_D$ for each 1 ms epoch and updates code phase and numerically-controlled oscillator (NCO) frequency accordingly. For moving path mode (GPX track), $\mathbf{r}_u$ and $\mathbf{v}_u$ are interpolated from the track at each epoch.</p>
+</section>
+
+<!-- §06 BPSK & I/Q -->
+<section class="section" id="s6">
+  <div class="sec-header">
+    <div class="sec-num">§ 06</div>
+    <h2 class="sec-title">BPSK Baseband &amp; I/Q</h2>
+  </div>
+  <p class="prose">The combined code·data signal modulates the L1 carrier using Binary Phase Shift Keying (BPSK). Rather than synthesising an RF signal directly, we generate <strong>complex baseband I/Q samples</strong> — the bladeRF's DAC and built-in local oscillator perform the final upconversion to 1575.42 MHz. <em>(Proakis, 2001, Ch. 5; Nuand bladeRF wiki)</em></p>
+
+  <div class="math-block">
+    <div class="math-label">Baseband I/Q per channel k (single PRN)</div>
+    $$I_k(n) = A_k \cdot D_k(n) \cdot CA_k(n) \cdot \cos\!\left(2\pi f_{D,k}\frac{n}{f_s} + \varphi_k\right)$$
+    $$Q_k(n) = A_k \cdot D_k(n) \cdot CA_k(n) \cdot \sin\!\left(2\pi f_{D,k}\frac{n}{f_s} + \varphi_k\right)$$
+    <div class="math-label" style="margin-top:1rem">Sum all visible satellites (N channels)</div>
+    $$I(n) = \sum_{k=1}^{N} I_k(n) \qquad Q(n) = \sum_{k=1}^{N} Q_k(n)$$
+    <div class="math-label" style="margin-top:1rem">Scale to bladeRF SC16Q11 format (Nuand bladeRF wiki)</div>
+    $$I_{raw}(n) = \mathrm{round}\!\left(I(n)\cdot\frac{2047}{A_{max}}\right),\quad I_{raw} \in [-2048,\,2047]$$
+    <div class="math-note">
+      $f_s$ — sample rate (2.048 – 61.44 Msps; use 2.6 Msps for GPS-only)<br>
+      $A_{max}$ — peak amplitude after summing $N$ channels; scale to ~60% of full-scale to preserve headroom<br>
+      Sample layout: <code>[I₁, Q₁, I₂, Q₂, …]</code> as interleaved int16_t pairs
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <div style="font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:.75rem">Live I/Q waveform — 2 PRN channels summed at baseband</div>
+    <div class="iq-controls">
+      <label>Doppler offset:</label>
+      <input type="range" id="dop-sl" min="-5000" max="5000" value="1400" oninput="redrawIQ()">
+      <span id="dop-val">+1400 Hz</span>
+      <span style="color:var(--text3);margin-left:.5rem;font-size:11px">@ 2.048 Msps</span>
+    </div>
+    <canvas id="iqCanvas" height="140"></canvas>
+    <div style="display:flex;gap:1rem;margin-top:.5rem;font-size:11px;color:var(--text3)">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#5b8af0;display:inline-block;border-radius:1px"></span>I channel</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#e8a03a;display:inline-block;border-radius:1px"></span>Q channel</span>
+    </div>
+  </div>
+</section>
+
+<!-- §07 REFERENCES -->
+<section class="section" id="refs">
+  <div class="sec-header">
+    <div class="sec-num">§ 07</div>
+    <h2 class="sec-title">References &amp; Citations</h2>
+  </div>
+  <p class="prose">Every equation and constant in this codebase is traceable to a primary source below. Full annotation in <a href="references.md">references.md</a>.</p>
+
+  <div class="ref-section">
+    <div class="ref-section-title">Primary Standards</div>
+
+    <div class="ref-item">
+      <div class="ref-title">IS-GPS-200L — Interface Specification: GPS SPS Signal Specification</div>
+      <div class="ref-author">U.S. Air Force, Global Positioning Systems Directorate. Latest revision: IS-GPS-200L (2020).</div>
+      <div class="ref-note">Authoritative source for L1 signal parameters, C/A code polynomials (Table 3-Ia), satellite position algorithm (§20.3.3.4.3), navigation message (§20.3), and parity encoding (§20.3.5.2).</div>
+      <a class="ref-link" href="https://www.gps.gov/technical/icwg/IS-GPS-200L.pdf">https://www.gps.gov/technical/icwg/IS-GPS-200L.pdf</a>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">WGS-84 Definition — Technical Report TR8350.2</div>
+      <div class="ref-author">National Geospatial-Intelligence Agency (NGA). 3rd edition.</div>
+      <div class="ref-note">Source for WGS-84 Earth constants: μ, Ω̇ₑ, c, semi-major axis $a_e = 6378137.0$ m.</div>
+      <a class="ref-link" href="https://earth-info.nga.mil/GandG/publications/tr8350.2/tr8350_2.html">https://earth-info.nga.mil/GandG/publications/tr8350.2/tr8350_2.html</a>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">RINEX 3.05 Format Specification</div>
+      <div class="ref-author">IGS RINEX Working Group. 2021.</div>
+      <div class="ref-note">Navigation file format for reading Keplerian ephemeris parameters into the signal generator.</div>
+      <a class="ref-link" href="https://files.igs.org/pub/data/format/rinex305.pdf">https://files.igs.org/pub/data/format/rinex305.pdf</a>
+    </div>
+  </div>
+
+  <div class="ref-section">
+    <div class="ref-section-title">Textbooks</div>
+
+    <div class="ref-item">
+      <div class="ref-title">Misra, P. &amp; Enge, P. (2006) — Global Positioning System: Signals, Measurements and Performance</div>
+      <div class="ref-author">2nd edition. Ganga-Jamuna Press. ISBN 978-0970954428.</div>
+      <div class="ref-note">Complete GPS signal model (Ch. 2), navigation message structure (Ch. 4), satellite position algorithm (§4.3), pseudorange &amp; Doppler derivation.</div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">Tsui, J. B. (2000) — Fundamentals of Global Positioning System Receivers: A Software Approach</div>
+      <div class="ref-author">Wiley-Interscience. ISBN 978-0471385981.</div>
+      <div class="ref-note">C/A code generator circuit (Ch. 3), signal acquisition, correlation properties of Gold codes.</div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">Borre et al. (2007) — A Software-Defined GPS and Galileo Receiver</div>
+      <div class="ref-author">Birkhäuser. ISBN 978-0817643904.</div>
+      <div class="ref-note">RINEX file format details, BPSK signal generation reference, MATLAB reference implementation.</div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">Proakis, J. G. (2001) — Digital Communications, 4th edition</div>
+      <div class="ref-author">McGraw-Hill. ISBN 978-0072321111.</div>
+      <div class="ref-note">BPSK modulation theory (Ch. 5), spread-spectrum fundamentals (Ch. 8), I/Q representation.</div>
+    </div>
+  </div>
+
+  <div class="ref-section">
+    <div class="ref-section-title">Open-Source Reference Implementations</div>
+
+    <div class="ref-item">
+      <div class="ref-title">gps-sdr-sim — GPS Signal Simulator</div>
+      <div class="ref-author">Takuji Ebinuma (osqzss). MIT License.</div>
+      <div class="ref-note">Primary open-source reference for C/A code generation, navigation message encoding, and channel summation. This project's signal output was benchmarked against gps-sdr-sim before any RF transmission.</div>
+      <a class="ref-link" href="https://github.com/osqzss/gps-sdr-sim">https://github.com/osqzss/gps-sdr-sim</a>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">GNSS-SDR — Open Source Global Navigation Satellite Systems Receiver</div>
+      <div class="ref-author">Fernández-Prades, C. et al. GPLv3.</div>
+      <div class="ref-note">Used as verification receiver: generated I/Q samples decoded with GNSS-SDR to confirm correct signal generation before hardware testing.</div>
+      <a class="ref-link" href="https://github.com/gnss-sdr/gnss-sdr">https://github.com/gnss-sdr/gnss-sdr</a>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">Nuand bladeRF 2.0 micro — Hardware Reference &amp; libbladeRF API</div>
+      <div class="ref-author">Nuand LLC.</div>
+      <div class="ref-note">SC16Q11 sample format, TX streaming API, gain and sample rate specifications.</div>
+      <a class="ref-link" href="https://github.com/Nuand/bladeRF/wiki">https://github.com/Nuand/bladeRF/wiki</a>
+    </div>
+  </div>
+
+  <div class="ref-section">
+    <div class="ref-section-title">Papers</div>
+
+    <div class="ref-item">
+      <div class="ref-title">Gold, R. (1967) — Optimal binary sequences for spread spectrum multiplexing</div>
+      <div class="ref-author">IEEE Transactions on Information Theory, 13(4), 619–621.</div>
+      <div class="ref-note">Original paper defining Gold codes and their cross-correlation bound used in the C/A code design.</div>
+      <a class="ref-link" href="https://doi.org/10.1109/TIT.1967.1054048">https://doi.org/10.1109/TIT.1967.1054048</a>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">Humphreys et al. (2008) — Assessing the Spoofing Threat: Development of a Portable GPS Civilian Spoofer</div>
+      <div class="ref-author">Proc. ION GNSS 2008, Savannah GA.</div>
+      <div class="ref-note">First published open architecture description of a civilian GPS spoofer. Consulted for signal generator design.</div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">Psiaki &amp; Humphreys (2016) — GNSS Spoofing and Detection</div>
+      <div class="ref-author">Proceedings of the IEEE, 104(6), 1258–1270. DOI: 10.1109/JPROC.2016.2526658</div>
+      <div class="ref-note">Survey of spoofing techniques and countermeasures. Provides context for responsible use.</div>
+    </div>
+  </div>
+</section>
+
+</div><!-- .page -->
+
+<footer>
+  <a href="https://github.com/yourusername/bladerf-gps-spoofer">bladerf-gps-spoofer</a> ·
+  Theory Reference · Based on IS-GPS-200L (public domain, US Govt) ·
+  RF-shielded authorised environment only ·
+  <a href="references.md">Full references</a>
+</footer>
+
+<script>
+// Signal chain highlight
+function schl(i,sec){
+  document.querySelectorAll('.sc-node').forEach((n,j)=>n.classList.toggle('active',j===i));
+  if(sec)document.getElementById(sec).scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// LFSR simulator
+let g1=[1,1,1,1,1,1,1,1,1,1],g2=[1,1,1,1,1,1,1,1,1,1];
+let chips=[],running=false,runTimer=null;
+
+function initLFSR(){g1=[1,1,1,1,1,1,1,1,1,1];g2=[1,1,1,1,1,1,1,1,1,1];chips=[];renderBits();renderChips();}
+function stepG1(){const fb=g1[2]^g1[9];g1.unshift(fb);g1.pop();return g1[9];}
+function stepG2(){const fb=g2[1]^g2[2]^g2[5]^g2[7]^g2[8]^g2[9];g2.unshift(fb);g2.pop();return g2[9];}
+function stepOnce(){
+  if(chips.length>=1023)return;
+  const c=stepG1()^stepG2();chips.push(c);
+  renderBits();renderChips();
+  document.getElementById('step-count').textContent=chips.length;
+  document.getElementById('out-bit').textContent=c;
+}
+function renderBits(){
+  ['g1','g2'].forEach(id=>{
+    const arr=id==='g1'?g1:g2,wrap=document.getElementById(id+'-bits');
+    if(!wrap)return;wrap.innerHTML='';
+    arr.forEach(b=>{const d=document.createElement('div');d.className='bit'+(b?' one':'');d.textContent=b;wrap.appendChild(d);});
+  });
+}
+function renderChips(){
+  const el=document.getElementById('chip-out');if(!el)return;
+  el.innerHTML='';chips.slice(-120).forEach(c=>{const d=document.createElement('div');d.className='chip'+(c?' one':'');el.appendChild(d);});
+}
+function toggleRun(){
+  running=!running;
+  const btn=document.getElementById('btn-run');
+  if(running){btn.textContent='⏸ Pause';runTimer=setInterval(()=>{if(chips.length<1023)stepOnce();else{running=false;clearInterval(runTimer);btn.textContent='▶ Done';}},25);}
+  else{clearInterval(runTimer);btn.textContent='▶ Run';}
+}
+function resetLFSR(){running=false;clearInterval(runTimer);document.getElementById('btn-run').textContent='▶ Run';document.getElementById('step-count').textContent='0';document.getElementById('out-bit').textContent='—';initLFSR();}
+function setPRN(p){document.getElementById('prn-disp').textContent=p;document.getElementById('prn-val').textContent='PRN '+p;resetLFSR();}
+
+// Frame visualization
+(function(){
+  const segs=[
+    {l:'SF1 — Clock',c:'#1a2d50',tc:'#5b8af0',desc:'Subframe 1 (300 bits, 6s): Satellite clock corrections a_f0/a_f1/a_f2, GPS week number, URA index, satellite health status, T_GD group delay. Repeated every 30 s frame.'},
+    {l:'SF2 — Ephemeris I',c:'#0d2820',tc:'#4caf7a',desc:'Subframe 2 (300 bits, 6s): First half of ephemeris. Contains M₀, Δn, e, √a, t_oe, and correction terms C_uc, C_us, C_rc, C_rs, C_ic, C_is. Used by §04 orbital algorithm.'},
+    {l:'SF3 — Ephemeris II',c:'#0d2820',tc:'#4caf7a',desc:'Subframe 3 (300 bits, 6s): Second half of ephemeris. Contains i₀, Ω₀, ω, IDOT (İ), OMEGADOT (Ω̇), fit interval flag. Together with SF2 gives complete orbital state.'},
+    {l:'SF4 — Almanac/Iono',c:'#1e1a00',tc:'#e8a03a',desc:'Subframe 4 (300 bits, 6s): Almanac data for SVs 25–32 (cycled over 25 frames), ionospheric model α/β parameters, UTC/leap-second data. Full almanac takes 12.5 minutes.'},
+    {l:'SF5 — Almanac',c:'#1e1a00',tc:'#e8a03a',desc:'Subframe 5 (300 bits, 6s): Almanac for SVs 1–24 (cycled over 25 frames). Page 25 contains health status summary for all 24 SVs.'},
+  ];
+  const row=document.getElementById('frame-row'),info=document.getElementById('frame-info');
+  segs.forEach(s=>{
+    const seg=document.createElement('div');
+    seg.className='frame-seg';
+    seg.style.cssText=`flex:1;background:${s.c};color:${s.tc};`;
+    seg.textContent=s.l;
+    seg.onmouseenter=()=>info.textContent=s.desc;
+    seg.onmouseleave=()=>info.textContent='← Hover a subframe to see its contents';
+    row.appendChild(seg);
+  });
+})();
+
+// Orbit animation
+(function(){
+  const c=document.getElementById('orbitCanvas');if(!c)return;
+  let angle=0;
+  function draw(){
+    const w=c.offsetWidth||700;c.width=w;c.height=180;
+    const ctx=c.getContext('2d'),cx=w/2,cy=90,rx=w*.32,ry=60;
+    ctx.clearRect(0,0,w,180);
+    ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+    ctx.strokeStyle='rgba(90,96,128,0.25)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);
+    ctx.fillStyle='#2a4a8a';ctx.fill();
+    ctx.fillStyle='rgba(100,150,255,0.4)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('Earth',cx,cy+4);
+    for(let i=10;i>=0;i--){
+      const a=angle-i*.07,sx=cx+rx*Math.cos(a),sy=cy+ry*Math.sin(a),al=1-i/10;
+      ctx.beginPath();ctx.arc(sx,sy,Math.max(1,5-i*.3),0,Math.PI*2);
+      ctx.fillStyle=`rgba(76,175,122,${al*.4})`;ctx.fill();
+    }
+    const sx=cx+rx*Math.cos(angle),sy=cy+ry*Math.sin(angle);
+    ctx.beginPath();ctx.arc(sx,sy,6,0,Math.PI*2);ctx.fillStyle='#4caf7a';ctx.fill();
+    ctx.beginPath();ctx.arc(sx,sy,10,0,Math.PI*2);ctx.strokeStyle='rgba(76,175,122,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+    const r=26565800,inc=55*Math.PI/180;
+    const ex=(r*Math.cos(angle)*1e-6).toFixed(3),ey=(r*Math.sin(angle)*Math.cos(inc)*1e-6).toFixed(3),ez=(r*Math.sin(angle)*Math.sin(inc)*1e-6).toFixed(3);
+    document.getElementById('orbit-info').textContent=`ECEF  x = ${ex}×10⁶ m   y = ${ey}×10⁶ m   z = ${ez}×10⁶ m   |r| ≈ 26,560 km`;
+    angle+=0.007;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// I/Q waveform
+function redrawIQ(){
+  const c=document.getElementById('iqCanvas');if(!c)return;
+  const w=c.offsetWidth||700;c.width=w;c.height=140;
+  const ctx=c.getContext('2d'),dop=+document.getElementById('dop-sl').value;
+  document.getElementById('dop-val').textContent=(dop>=0?'+':'')+dop+' Hz';
+  const fs=2048000;
+  ctx.clearRect(0,0,w,140);
+  ctx.strokeStyle='rgba(90,96,128,0.12)';ctx.lineWidth=.5;
+  [35,70,105].forEach(y=>{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();});
+  ctx.strokeStyle='rgba(90,96,128,0.25)';ctx.beginPath();ctx.moveTo(0,70);ctx.lineTo(w,70);ctx.stroke();
+  const prn1=[1,0,1,1,0,1,0,0,1,1,0,1,1,1,0,0,1,0,1,1,0,0,0,1,0,0,0,0,1,1,1,0,1];
+  const prn2=[0,1,1,0,1,0,1,1,0,0,1,1,0,1,0,1,0,0,1,0,1,1,1,0,1,1,1,1,0,0,0,1,0];
+  const gc=n=>prn1[Math.floor(n*1.023e6/fs*prn1.length)%prn1.length]*2-1;
+  const gc2=n=>prn2[Math.floor(n*1.023e6/fs*prn2.length)%prn2.length]*2-1;
+  ctx.beginPath();ctx.strokeStyle='#5b8af0';ctx.lineWidth=1.3;
+  for(let x=0;x<w;x++){const t=x/fs*16,v=(gc(x)*Math.cos(2*Math.PI*dop*t)+gc2(x)*Math.cos(2*Math.PI*dop*1.3*t))*0.5;if(x===0)ctx.moveTo(x,70-v*48);else ctx.lineTo(x,70-v*48);}ctx.stroke();
+  ctx.beginPath();ctx.strokeStyle='#e8a03a';ctx.lineWidth=1.3;
+  for(let x=0;x<w;x++){const t=x/fs*16,v=(gc(x)*Math.sin(2*Math.PI*dop*t)+gc2(x)*Math.sin(2*Math.PI*dop*1.3*t))*0.5;if(x===0)ctx.moveTo(x,70-v*48);else ctx.lineTo(x,70-v*48);}ctx.stroke();
+}
+
+window.addEventListener('load',()=>{initLFSR();redrawIQ();setTimeout(redrawIQ,300);});
+window.addEventListener('resize',()=>redrawIQ());
+</script>
+</body>
+</html>
