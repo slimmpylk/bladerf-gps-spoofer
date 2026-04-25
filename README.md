@@ -17,7 +17,7 @@
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-lightgrey.svg)](https://www.kernel.org/)
 [![Hardware: bladeRF](https://img.shields.io/badge/Hardware-bladeRF%202.0-green.svg)](https://www.nuand.com/bladerf-2-0-micro/)
 [![Theory Docs](https://img.shields.io/badge/Theory-Math%20Reference-purple.svg)](https://slimmpylk.github.io/bladerf-gps-spoofer/)
-
+[![Beginner Guide](https://img.shields.io/badge/Guide-Beginner%20Friendly-green.svg)](https://slimmpylk.github.io/bladerf-gps-spoofer/learn.html)
 ---
 
 ## ⚠️ Legal Notice
