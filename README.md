@@ -16,7 +16,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-lightgrey.svg)](https://www.kernel.org/)
 [![Hardware: bladeRF](https://img.shields.io/badge/Hardware-bladeRF%202.0-green.svg)](https://www.nuand.com/bladerf-2-0-micro/)
-[![Theory Docs](https://img.shields.io/badge/Theory-Math%20Reference-purple.svg)](https://yourusername.github.io/bladerf-gps-spoofer/)
+[![Theory Docs](https://img.shields.io/badge/Theory-Math%20Reference-purple.svg)](https://slimmpylk.github.io/bladerf-gps-spoofer/)
 
 ---
 
@@ -45,7 +45,7 @@ with appropriate regulatory authorisation.**
 - Modulates to BPSK baseband, sums all channels, and streams SC16Q11 samples to bladeRF TX
 - Exposes a REST API consumed by a React/TypeScript coordinate-picker UI
 
-📖 **[Full mathematical theory & derivations →](https://yourusername.github.io/bladerf-gps-spoofer/)**
+📖 **[Full mathematical theory & derivations →](https://slimmpylk.github.io/bladerf-gps-spoofer/)**
 
 ---
 
@@ -188,7 +188,7 @@ The bladeRF begins transmitting immediately when you click **ARM**.
 
 ## How It Works
 
-See the **[interactive theory reference](https://yourusername.github.io/bladerf-gps-spoofer/)** for the full mathematical derivation of every component. The short version:
+See the **[interactive theory reference](https://slimmpylk.github.io/bladerf-gps-spoofer/)** for the full mathematical derivation of every component. The short version:
 
 1. **C/A code generation** — Two 10-stage LFSRs (G1, G2) with polynomials from IS-GPS-200 Table 3-Ia produce a unique 1023-chip Gold code per PRN. The code repeats every 1 ms at 1.023 Mcps.
 
